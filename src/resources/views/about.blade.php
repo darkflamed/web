@@ -46,6 +46,7 @@
         </div>
         <div class="card-body">
           <p class="text-justify">
+            test fix
             <strong><a href="https://www.eveonline.com" target="_blank">EVE Online</a></strong> and the EVE logo are the
             registered trademarks of <strong><a href="https://www.ccpgames.com" target="_blank">CCP hf</a></strong>.
             All rights are reserved worldwide. All other trademarks are the property of their respective owners.
