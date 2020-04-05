@@ -21,12 +21,13 @@
  */
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 /**
- * Class RemoveV3RolePermissions.
+ * Class AddSquadUserUniqueToSquadApplicationsTable.
  */
-class RemoveV3Permissions extends Migration
+class AddSquadUserUniqueToSquadApplicationsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -35,8 +36,11 @@ class RemoveV3Permissions extends Migration
      */
     public function up()
     {
+        Schema::table('squad_applications', function (Blueprint $table) {
+            $table->dropUnique(['squad_id']);
 
-        DB::table('permissions')->delete();
+            $table->unique(['squad_id', 'user_id']);
+        });
     }
 
     /**
@@ -46,6 +50,9 @@ class RemoveV3Permissions extends Migration
      */
     public function down()
     {
-
+        Schema::table('squad_applications', function (Blueprint $table) {
+            $table->dropUnique(['squad_id', 'user_id']);
+            $table->unique('squad_id');
+        });
     }
 }

@@ -160,7 +160,7 @@ class MoonsDataTable extends DataTable
      */
     public function query()
     {
-        return MapDenormalize::moons()
+        return MapDenormalize::has('moon_contents')
             ->with('planet', 'system', 'constellation', 'region', 'sovereignty', 'sovereignty.faction',
                    'sovereignty.alliance', 'sovereignty.corporation', 'moon_contents', 'moon_contents.type');
     }

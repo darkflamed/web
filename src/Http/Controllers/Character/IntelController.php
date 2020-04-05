@@ -23,7 +23,7 @@
 namespace Seat\Web\Http\Controllers\Character;
 
 use Seat\Eveapi\Models\Character\CharacterInfo;
-use Seat\Eveapi\Models\Corporation\CorporationInfo;
+use Seat\Eveapi\Models\RefreshToken;
 use Seat\Services\Repositories\Character\Intel;
 use Seat\Web\Http\Controllers\Controller;
 use Seat\Web\Http\DataTables\Character\Intel\NoteDataTable;
@@ -49,7 +49,14 @@ class IntelController extends Controller
      */
     public function getIntelSummary(int $character_id)
     {
-        return view('web::character.intel.summary');
+
+        $token = RefreshToken::where('character_id', $character_id)->first();
+        $characters = collect();
+        if ($token) {
+            $characters = User::with('characters')->find($token->user_id)->characters;
+        }
+
+        return view('web::character.intel.summary', compact('characters'));
     }
 
     /**
@@ -58,9 +65,11 @@ class IntelController extends Controller
      */
     public function getTopWalletJournalData(int $character_id)
     {
-        if (! request()->has('all_linked_characters'))
+
+        if (! request()->has('characters'))
             return abort(500);
 
+        $requested_characters = (array) request()->input('characters');
         $character_ids = collect($character_id);
 
         if (CharacterInfo::find($character_id)->refresh_token) {
@@ -68,9 +77,12 @@ class IntelController extends Controller
                 ->characters
                 ->pluck('character_id');
 
-            if (request('all_linked_characters') === 'true')
-                $character_ids = $related_characters_ids;
+            $character_ids = $related_characters_ids;
         }
+
+        $character_ids = $character_ids->filter(function ($value, $key) use ($requested_characters) {
+            return in_array($value, $requested_characters);
+        });
 
         $top = $this->characterTopWalletJournalInteractions($character_ids);
 
@@ -79,21 +91,32 @@ class IntelController extends Controller
 
                 return ucwords(str_replace('_', ' ', $row->ref_type));
             })
-            ->editColumn('character.name', function ($row) {
+            ->editColumn('entity_name', function ($row) {
 
-                return view('web::partials.character', ['character' => $row->character]);
+                if($row->category == 'character') {
+                    $character = (object) ['character_id' => $row->party_id, 'name' => $row->party_name];
+
+                    return view('web::partials.character', ['character' => $character]);
+                }
+                elseif($row->category == 'corporation') {
+                    $corporation = (object) ['corporation_id' => $row->party_id, 'name' => $row->party_name];
+
+                    return view('web::partials.corporation', ['corporation' => $corporation]);
+                }
+                else
+                    return '';
             })
-            ->editColumn('corporation.name', function ($row) {
+            ->editColumn('corporation_id', function ($row) {
 
-                return view('web::partials.corporation', ['corporation' => $row->corporation]);
+                return view('web::partials.corporation', ['corporation' => $row]);
             })
-            ->editColumn('alliance.name', function ($row) {
+            ->editColumn('alliance_id', function ($row) {
 
-                return view('web::partials.alliance', ['alliance' => $row->alliance]);
+                return view('web::partials.alliance', ['alliance' => $row]);
             })
-            ->editColumn('faction.name', function ($row) {
+            ->editColumn('faction_id', function ($row) {
 
-                return view('web::partials.faction', ['faction' => $row->faction]);
+                return view('web::partials.faction', ['faction' => $row]);
             })
             ->addColumn('action', function ($row) {
                 return view('web::character.intel.buttons.journal', compact('row'));
@@ -109,9 +132,11 @@ class IntelController extends Controller
      */
     public function getTopTransactionsData(int $character_id)
     {
-        if (! request()->has('all_linked_characters'))
+
+        if (! request()->has('characters'))
             return abort(500);
 
+        $requested_characters = (array) request()->input('characters');
         $character_ids = collect($character_id);
 
         if (CharacterInfo::find($character_id)->refresh_token) {
@@ -119,28 +144,41 @@ class IntelController extends Controller
                 ->characters
                 ->pluck('character_id');
 
-            if (request('all_linked_characters') === 'true')
-                $character_ids = $related_characters_ids;
+            $character_ids = $related_characters_ids;
         }
+
+        $character_ids = $character_ids->filter(function ($value, $key) use ($requested_characters) {
+            return in_array($value, $requested_characters);
+        });
 
         $top = $this->characterTopWalletTransactionInteractions($character_ids);
 
         return DataTables::of($top)
-            ->editColumn('character.name', function ($row) {
+            ->editColumn('entity_name', function ($row) {
+                if($row->category == 'character') {
+                    $character = (object) ['character_id' => $row->party_id, 'name' => $row->party_name];
 
-                return view('web::partials.character', ['character' => $row->character]);
+                    return view('web::partials.character', ['character' => $character]);
+                }
+                elseif($row->category == 'corporation') {
+                    $corporation = (object) ['corporation_id' => $row->party_id, 'name' => $row->party_name];
+
+                    return view('web::partials.corporation', ['corporation' => $corporation]);
+                }
+                else
+                    return '';
             })
-            ->editColumn('corporation.name', function ($row) {
+            ->editColumn('corporation_id', function ($row) {
 
-                return view('web::partials.corporation', ['corporation' => $row->corporation]);
+                return view('web::partials.corporation', ['corporation' => $row]);
             })
-            ->editColumn('alliance.name', function ($row) {
+            ->editColumn('alliance_id', function ($row) {
 
-                return view('web::partials.alliance', ['alliance' => $row->alliance]);
+                return view('web::partials.alliance', ['alliance' => $row]);
             })
-            ->editColumn('faction.name', function ($row) {
+            ->editColumn('faction_id', function ($row) {
 
-                return view('web::partials.faction', ['faction' => $row->faction]);
+                return view('web::partials.faction', ['faction' => $row]);
             })
             ->addColumn('action', function ($row) {
                 return view('web::character.intel.buttons.transaction', compact('row'));
@@ -155,9 +193,11 @@ class IntelController extends Controller
      */
     public function getTopMailFromData(int $character_id)
     {
-        if (! request()->has('all_linked_characters'))
+
+        if (! request()->has('characters'))
             return abort(500);
 
+        $requested_characters = (array) request()->input('characters');
         $character_ids = collect($character_id);
 
         if (CharacterInfo::find($character_id)->refresh_token) {
@@ -165,28 +205,32 @@ class IntelController extends Controller
                 ->characters
                 ->pluck('character_id');
 
-            if (request('all_linked_characters') === 'true')
-                $character_ids = $related_characters_ids;
+            $character_ids = $related_characters_ids;
         }
+
+        $character_ids = $character_ids->filter(function ($value, $key) use ($requested_characters) {
+            return in_array($value, $requested_characters);
+        });
 
         $top = $this->characterTopMailInteractions($character_ids);
 
         return DataTables::of($top)
-            ->editColumn('character.name', function ($row) {
+            ->editColumn('character_id', function ($row) {
+                $character = (object) ['character_id' => $row->character_id ?? 0, 'name' => $row->character_name ?? ''];
 
-                return view('web::partials.character', ['character' => $row->character]);
+                return view('web::partials.character', ['character' => $character]);
             })
-            ->editColumn('corporation.name', function ($row) {
+            ->editColumn('corporation_id', function ($row) {
 
-                return view('web::partials.corporation', ['corporation' => $row->corporation]);
+                return view('web::partials.corporation', ['corporation' => $row]);
             })
-            ->editColumn('alliance.name', function ($row) {
+            ->editColumn('alliance_id', function ($row) {
 
-                return view('web::partials.alliance', ['alliance' => $row->alliance]);
+                return view('web::partials.alliance', ['alliance' => $row]);
             })
-            ->editColumn('faction.name', function ($row) {
+            ->editColumn('faction_id', function ($row) {
 
-                return view('web::partials.faction', ['faction' => $row->faction]);
+                return view('web::partials.faction', ['faction' => $row]);
             })
             ->addColumn('action', function ($row) {
                 return view('web::character.intel.buttons.mail', compact('row'));
@@ -251,13 +295,24 @@ class IntelController extends Controller
      * @param int $character_id
      * @param int $first_party_id
      * @param int $second_party_id
+     * @param string $ref_type
      * @return mixed
      * @throws \Exception
      */
-    public function getJournalContent(int $character_id, int $first_party_id, int $second_party_id)
+    public function getJournalContent(int $character_id, int $first_party_id, int $second_party_id, string $ref_type)
     {
 
-        $journal = $this->characterWalletJournalInteractions($first_party_id, $second_party_id);
+        $character_ids = collect($character_id);
+
+        if (CharacterInfo::find($character_id)->refresh_token) {
+            $related_characters_ids = User::find(CharacterInfo::find($character_id)->refresh_token->user_id)
+                ->characters
+                ->pluck('character_id');
+
+            $character_ids = $related_characters_ids;
+        }
+
+        $journal = $this->characterWalletJournalInteractions($character_ids, $first_party_id, $second_party_id, $ref_type);
 
         return DataTables::of($journal)
             ->editColumn('ref_type', function ($row) {
@@ -266,48 +321,36 @@ class IntelController extends Controller
             })
             ->editColumn('first_party_id', function ($row) {
 
-                $character_id = $row->character_id;
-
                 if (optional($row->first_party)->category === 'character') {
 
-                    $character = CharacterInfo::find($row->first_party_id) ?: $row->first_party_id;
-
-                    return view('web::partials.character', compact('character', 'character_id'));
+                    return view('web::partials.character', ['character' => $row->first_party]);
                 }
 
                 if (optional($row->first_party)->category === 'corporation'){
 
-                    $corporation = CorporationInfo::find($row->first_party_id) ?: $row->first_party_id;
-
-                    return view('web::partials.corporation', compact('corporation', 'character_id'));
+                    return view('web::partials.corporation', ['corporation' => $row->first_party]);
                 }
 
                 return view('web::partials.unknown', [
                     'unknown_id' => $row->first_party_id,
-                    'character_id' => $character_id,
+                    'character_id' => $row->character_id,
                 ]);
             })
             ->editColumn('second_party_id', function ($row) {
 
-                $character_id = $row->character_id;
-
                 if (optional($row->second_party)->category === 'character') {
 
-                    $character = CharacterInfo::find($row->second_party_id) ?: $row->second_party_id;
-
-                    return view('web::partials.character', compact('character', 'character_id'));
+                    return view('web::partials.character', ['character' => $row->second_party]);
                 }
 
                 if (optional($row->second_party)->category === 'corporation') {
 
-                    $corporation = CorporationInfo::find($row->second_party_id) ?: $row->second_party_id;
-
-                    return view('web::partials.corporation', compact('corporation', 'character_id'));
+                    return view('web::partials.corporation', ['corporation' => $row->second_party]);
                 }
 
                 return view('web::partials.unknown', [
                     'unknown_id' => $row->second_party_id,
-                    'character_id' => $character_id,
+                    'character_id' => $row->character_id,
                 ]);
             })
             ->editColumn('amount', function ($row) {
@@ -335,7 +378,17 @@ class IntelController extends Controller
     public function getTransactionContent(int $character_id, int $client_id)
     {
 
-        $transactions = $this->characterWalletTransactionInteraction($character_id, $client_id);
+        $character_ids = collect($character_id);
+
+        if (CharacterInfo::find($character_id)->refresh_token) {
+            $related_characters_ids = User::find(CharacterInfo::find($character_id)->refresh_token->user_id)
+                ->characters
+                ->pluck('character_id');
+
+            $character_ids = $related_characters_ids;
+        }
+
+        $transactions = $this->characterWalletTransactionInteraction($character_ids, $client_id);
 
         return DataTables::of($transactions)
             ->editColumn('date', function ($row) {
@@ -390,7 +443,17 @@ class IntelController extends Controller
     public function getTopMailContent(int $character_id, int $from)
     {
 
-        $mail = $this->getMailContent($character_id, $from);
+        $character_ids = collect($character_id);
+
+        if (CharacterInfo::find($character_id)->refresh_token) {
+            $related_characters_ids = User::find(CharacterInfo::find($character_id)->refresh_token->user_id)
+                ->characters
+                ->pluck('character_id');
+
+            $character_ids = $related_characters_ids;
+        }
+
+        $mail = $this->getMailContent($character_ids, $from);
 
         return DataTables::of($mail)
             ->editColumn('sender.name', function ($row) {

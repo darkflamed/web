@@ -3,7 +3,7 @@
 /*
  * This file is part of SeAT
  *
- * Copyright (C) 2015, 2016, 2017, 2018, 2019  Leon Jacobs
+ * Copyright (C) 2015, 2016, 2017, 2018, 2019, 2020  Leon Jacobs
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,13 @@
  */
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 /**
- * Class RemoveV3RolePermissions.
+ * Class DropIsModeratedFromSquadsTable.
  */
-class RemoveV3Permissions extends Migration
+class DropIsModeratedFromSquadsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -35,8 +36,9 @@ class RemoveV3Permissions extends Migration
      */
     public function up()
     {
-
-        DB::table('permissions')->delete();
+        Schema::table('squads', function (Blueprint $table) {
+            $table->dropColumn('is_moderated');
+        });
     }
 
     /**
@@ -46,6 +48,8 @@ class RemoveV3Permissions extends Migration
      */
     public function down()
     {
-
+        Schema::table('squads', function (Blueprint $table) {
+            $table->boolean('is_moderated');
+        });
     }
 }

@@ -20,13 +20,20 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-// Email confirmation routes
-Route::get('/', [
-    'as'   => 'auth.email',
-    'uses' => 'EmailController@getEmailRequired',
-]);
-
-Route::get('confirm/{token}', [
-    'as'   => 'auth.email.confirm',
-    'uses' => 'EmailController@confirmEmail',
-]);
+return [
+    'view_moon_reports' => [
+        'division'      => 'industrial',
+        'label'         => 'web::permissions.view_moon_reports_label',
+        'description'   => 'web::permissions.view_moon_reports_description',
+    ],
+    'create_moon_reports' => [
+        'division'      => 'industrial',
+        'label'         => 'web::permissions.create_moon_reports_label',
+        'description'   => 'web::permissions.create_moon_reports_description',
+    ],
+    'manage_moon_reports' => [
+        'division'      => 'industrial',
+        'label'         => 'web::permissions.manage_moon_reports_label',
+        'description'   => 'web::permissions.manage_moon_reports_description',
+    ],
+];
